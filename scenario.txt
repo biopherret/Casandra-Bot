@@ -24,7 +24,6 @@ fc-call-of-the-nether
 Circlet of Elements
 Ring of Duality
 Simple Bow
-# Starts as all 9
 
 ## Discard
 
@@ -37,4 +36,3 @@ fc-cursed-ground
 fc-peer-into-battle
 fc-protective-aura
 anticipate-intricacies
-# every other card in the cards folder
