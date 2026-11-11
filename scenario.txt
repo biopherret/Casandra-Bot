@@ -1,0 +1,23 @@
+## File should store the hand state of the character.
+
+## Active list
+anticipate-intricacies
+approach-of-the-void
+dimensional-transfer
+fc-duality-shards
+fc-ray-of-light
+fc-revitalizing-fount
+fc-void-snare
+inspiration-from-beyond
+otherworldly-journey
+# Reminder - user should replace one of these with Call of the nether before playing
+
+## In-hand
+# Starts as all 9
+
+## Discard
+
+## Burned
+
+## Unavailable
+# should be every other card in the folder
