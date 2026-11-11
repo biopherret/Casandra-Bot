@@ -21,7 +21,8 @@ CONTROLS = [PLAY, LOSE, SHORT, LONG, CANCEL, REROLL]
 
 load_dotenv(ROOT / ".env")
 game = GameState(ROOT / os.getenv("STATE_FILE", "scenario.txt"), ROOT / os.getenv("CARDS_DIR", "cards"))
-OWNER_ID = int(os.getenv("OWNER_ID", "0")) or None  # optional: only this user may press reactions
+_owner = (os.getenv("OWNER_ID") or "").strip()
+OWNER_ID = int(_owner) if _owner.isdigit() else None  # optional: only this user may press reactions
 
 intents = discord.Intents.default()
 intents.message_content = True
