@@ -13,6 +13,15 @@ otherworldly-journey
 # Reminder - user should replace one of these with Call of the nether before playing
 
 ## In-hand
+anticipate-intricacies
+approach-of-the-void
+dimensional-transfer
+fc-duality-shards
+fc-ray-of-light
+fc-revitalizing-fount
+fc-void-snare
+inspiration-from-beyond
+otherworldly-journey
 # Starts as all 9
 
 ## Discard
@@ -20,4 +29,10 @@ otherworldly-journey
 ## Burned
 
 ## Unavailable
-# should be every other card in the folder
+fc-bad-omen
+fc-call-of-the-nether
+fc-clairvoyance
+fc-cursed-ground
+fc-peer-into-battle
+fc-protective-aura
+# every other card in the cards folder
