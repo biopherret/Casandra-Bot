@@ -1,16 +1,15 @@
 ## File should store the hand state of the character.
 
 ## Active list
-anticipate-intricacies
 approach-of-the-void
 dimensional-transfer
-fc-duality-shards
-fc-ray-of-light
-fc-revitalizing-fount
-fc-void-snare
 inspiration-from-beyond
 otherworldly-journey
-# Reminder - user should replace one of these with Call of the nether before playing
+fc-duality-shards
+fc-ray-of-light
+fc-void-snare
+fc-revitalizing-fount
+fc-call-of-the-nether
 
 ## In-hand
 anticipate-intricacies
@@ -30,9 +29,9 @@ otherworldly-journey
 
 ## Unavailable
 fc-bad-omen
-fc-call-of-the-nether
 fc-clairvoyance
 fc-cursed-ground
 fc-peer-into-battle
 fc-protective-aura
+anticipate-intricacies
 # every other card in the cards folder
