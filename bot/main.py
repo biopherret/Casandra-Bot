@@ -16,11 +16,13 @@ from .render import render_board
 
 ROOT = Path(__file__).resolve().parent.parent
 NUMBERS = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
+LETTERS = ["🇦", "🇧", "🇨", "🇩", "🇪", "🇫", "🇬", "🇭", "🇮", "🇯", "🇰", "🇱", "🇲"]
 PLAY, LOSE, SHORT, LONG, CANCEL, REROLL, RETURN = "✅", "🔥", "💤", "🛌", "❌", "🔄", "↩️"
 CONTROLS = [PLAY, LOSE, RETURN, SHORT, LONG, CANCEL, REROLL]
 
 load_dotenv(ROOT / ".env")
-game = GameState(ROOT / os.getenv("STATE_FILE", "scenario.txt"), ROOT / os.getenv("CARDS_DIR", "cards"))
+game = GameState(ROOT / os.getenv("STATE_FILE", "scenario.txt"), ROOT / os.getenv("CARDS_DIR", "cards"),
+                 ROOT / os.getenv("ITEMS_DIR", "items"))
 _owner = (os.getenv("OWNER_ID") or "").strip()
 OWNER_ID = int(_owner) if _owner.isdigit() else None  # optional: only this user may press reactions
 
@@ -42,8 +44,17 @@ class Session:
 sessions: dict[int, Session] = {}  # channel id -> latest board
 
 
+def piece_tokens() -> list[str]:
+    """Reaction emoji for every piece on the board: 1-N for cards, then A, B, ... for items."""
+    return NUMBERS[: len(game.active)] + LETTERS[: len(game.items)]
+
+
+def token_of(piece: str) -> str:
+    return piece_tokens()[game.pieces.index(piece)]
+
+
 def names(cards: list[str]) -> str:
-    return ", ".join(f"**{game.number(c)}** {pretty(c)}" for c in cards) or "—"
+    return ", ".join(f"**{game.label(c)}** {pretty(c)}" for c in cards) or "—"
 
 
 def content(s: Session) -> str:
@@ -57,7 +68,7 @@ def content(s: Session) -> str:
     if s.selected:
         parts.append(f"▶️ **Selected:** {names(s.selected)}")
     parts.append(f"\n{s.status}")
-    parts.append(f"-# {'/'.join(NUMBERS[:1])}-{len(game.active)} select · {PLAY} discard · {LOSE} lose · "
+    parts.append(f"-# number/letter select · {PLAY} discard · {LOSE} lose · "
                  f"{RETURN} return to hand · {SHORT} short rest · {LONG} long rest · {CANCEL} cancel · {REROLL} redraw short rest (1 dmg)")
     return "\n".join(parts)
 
@@ -83,16 +94,16 @@ async def open_board(channel) -> Session:
     s = Session(message=msg)
     sessions[channel.id] = s
     await refresh(s)
-    for e in NUMBERS[: len(game.active)] + CONTROLS:
+    for e in piece_tokens() + CONTROLS:
         await msg.add_reaction(e)
     return s
 
 
 async def handle(s: Session, emoji: str, user_id: int, added: bool) -> None:
-    numbers = NUMBERS[: len(game.active)]
+    tokens = piece_tokens()
     # --- number reactions ---
-    if emoji in numbers:
-        card = game.active[numbers.index(emoji)]
+    if emoji in tokens:
+        card = game.pieces[tokens.index(emoji)]
         if s.long_rest:
             if not added:
                 return
@@ -132,7 +143,7 @@ async def handle(s: Session, emoji: str, user_id: int, added: bool) -> None:
             game.play(cards, lose=emoji == LOSE)
             s.reroll_snapshot = None
             s.status = f"{'🔥 Lost' if emoji == LOSE else '✅ Discarded'}: {names(cards)}"
-            await unreact(s, user_id, [NUMBERS[game.number(c) - 1] for c in cards])
+            await unreact(s, user_id, [token_of(c) for c in cards])
     elif emoji == RETURN:
         if s.long_rest:
             s.status = f"⚠️ Finish your long rest first (pick a discard card) or press {CANCEL}."
@@ -146,7 +157,7 @@ async def handle(s: Session, emoji: str, user_id: int, added: bool) -> None:
                 game.move(c, "hand")
             s.reroll_snapshot = None
             s.status = f"↩️ Returned to hand: {names(cards)}"
-            await unreact(s, user_id, [NUMBERS[game.number(c) - 1] for c in cards])
+            await unreact(s, user_id, [token_of(c) for c in cards])
             await refresh(s, highlight=cards)
             return
     elif emoji == SHORT:
@@ -155,7 +166,7 @@ async def handle(s: Session, emoji: str, user_id: int, added: bool) -> None:
         s.reroll_snapshot, s.long_rest = snap, False
         s.status = (f"💤 Short rest: randomly lost **{pretty(lost)}**; the rest of your discard returned to hand.\n"
                     f"Press {REROLL} to take 1 damage and redraw a different random card instead.")
-        await unreact(s, user_id, [NUMBERS[game.number(c) - 1] for c in s.selected])
+        await unreact(s, user_id, [token_of(c) for c in s.selected])
         s.selected = []
         await refresh(s, highlight=[lost])
         return
@@ -173,7 +184,7 @@ async def handle(s: Session, emoji: str, user_id: int, added: bool) -> None:
         if len(game.discard) < 2:
             s.status = "⚠️ You need at least 2 cards in your discard pile to rest."
         else:
-            await unreact(s, user_id, [NUMBERS[game.number(c) - 1] for c in s.selected])
+            await unreact(s, user_id, [token_of(c) for c in s.selected])
             s.selected, s.long_rest, s.reroll_snapshot = [], True, None
             s.status = f"🛌 **Long rest:** react with the number of the DISCARD card to lose ({CANCEL} to cancel)."
     elif emoji == CANCEL:
@@ -210,15 +221,17 @@ async def on_raw_reaction_remove(payload):
 
 @bot.event
 async def on_ready():
-    print(f"Logged in as {bot.user}. Active cards: {', '.join(game.active)}")
+    print(f"Logged in as {bot.user}. Active cards: {', '.join(game.active)} | Items: {', '.join(game.items) or 'none'}")
 
 
 def resolve(arg: str) -> str:
     arg = arg.strip().lower().replace(" ", "-")
-    if arg.isdigit() and 1 <= int(arg) <= len(game.active):
-        return game.active[int(arg) - 1]
-    for c in game.all_cards():
-        if arg in (c, c.removeprefix("fc-")) or arg in c:
+    for c in game.pieces:  # badge: 3 or a
+        if arg == game.label(c).lower():
+            return c
+    for c in game.pieces + game.all_cards():
+        norm = c.lower().replace(" ", "-")
+        if arg in (norm, norm.removeprefix("fc-")) or arg in norm:
             return c
     raise GameError(f"No card matches '{arg}'.")
 
@@ -244,8 +257,8 @@ async def card_cmd(ctx, *, which: str):
         c = resolve(which)
     except GameError as e:
         return await ctx.send(f"⚠️ {e}")
-    where = game.location(c) if c in game.active else "unavailable"
-    await ctx.send(f"**{pretty(c)}** ({where})", file=discord.File(game.cards_dir / f"{c}.png"))
+    where = game.location(c) if c in game.pieces else "unavailable"
+    await ctx.send(f"**{pretty(c)}** ({where})", file=discord.File(game.image_path(c)))
 
 
 @bot.command(name="move")

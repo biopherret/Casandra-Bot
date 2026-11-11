@@ -38,36 +38,36 @@ def _thumb(path: str, width: int) -> Image.Image:
 
 
 def render_board(game: GameState, selected=(), highlight=()) -> bytes:
-    """selected = cards ringed in gold (queued to play); highlight = cards ringed in white."""
-    layout = []  # (title, colour, cards, w, cols, rows, h)
+    """selected = pieces ringed in gold (queued); highlight = pieces ringed in white."""
+    layout = []  # (title, colour, w, cols, top, [(card, thumb)...], row_heights)
     y = GAP
     for attr, title, w, colour in SECTIONS:
         cards = getattr(game, attr)
         cols = max(1, (WIDTH - GAP) // (w + GAP))
-        rows = max(1, -(-len(cards) // cols))
-        h = round(887 * w / 633)
-        layout.append((title, colour, cards, w, cols, y, h))
-        y += 40 + rows * (h + GAP) if cards else 40 + 30
+        thumbs = [(c, _thumb(str(game.image_path(c)), w)) for c in cards]
+        row_h = [max(t.height for _, t in thumbs[i:i + cols]) for i in range(0, len(thumbs), cols)]
+        layout.append((title, colour, w, cols, y, thumbs, row_h))
+        y += 40 + sum(h + GAP for h in row_h) if cards else 40 + 30
     height = y + GAP
 
     canvas = Image.new("RGB", (WIDTH, height), BG)
     d = ImageDraw.Draw(canvas)
-    for title, colour, cards, w, cols, top, h in layout:
-        d.text((GAP, top), f"{title} ({len(cards)})", fill=colour, font=_font(26))
-        if not cards:
+    for title, colour, w, cols, top, thumbs, row_h in layout:
+        d.text((GAP, top), f"{title} ({len(thumbs)})", fill=colour, font=_font(26))
+        if not thumbs:
             d.text((GAP + 4, top + 38), "- empty -", fill=(120, 124, 135), font=_font(18))
             continue
-        for i, card in enumerate(cards):
+        for i, (card, img) in enumerate(thumbs):
+            row = i // cols
             x = GAP + (i % cols) * (w + GAP)
-            cy = top + 40 + (i // cols) * (h + GAP)
-            img = _thumb(str(game.cards_dir / f"{card}.png"), w)
+            cy = top + 40 + sum(h + GAP for h in row_h[:row])
             if card in selected or card in highlight:
                 ring = GOLD if card in selected else (255, 255, 255)
-                d.rounded_rectangle((x - 5, cy - 5, x + w + 5, cy + h + 5), 10, outline=ring, width=5)
+                d.rounded_rectangle((x - 5, cy - 5, x + img.width + 5, cy + img.height + 5), 10, outline=ring, width=5)
             canvas.paste(img, (x, cy), img)
             r = 20 if w > 150 else 16
             d.ellipse((x + 4, cy + 4, x + 4 + 2 * r, cy + 4 + 2 * r), fill=(20, 20, 24), outline=colour, width=3)
-            d.text((x + 4 + r, cy + 4 + r), str(game.number(card)), fill="white", font=_font(r + 4), anchor="mm")
+            d.text((x + 4 + r, cy + 4 + r), game.label(card), fill="white", font=_font(r + 4), anchor="mm")
     buf = io.BytesIO()
     canvas.save(buf, "PNG", optimize=True)
     return buf.getvalue()
