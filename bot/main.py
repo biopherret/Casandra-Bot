@@ -16,8 +16,8 @@ from .render import render_board
 
 ROOT = Path(__file__).resolve().parent.parent
 NUMBERS = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
-PLAY, LOSE, SHORT, LONG, CANCEL, REROLL = "✅", "🔥", "💤", "🛌", "❌", "🔄"
-CONTROLS = [PLAY, LOSE, SHORT, LONG, CANCEL, REROLL]
+PLAY, LOSE, SHORT, LONG, CANCEL, REROLL, RETURN = "✅", "🔥", "💤", "🛌", "❌", "🔄", "↩️"
+CONTROLS = [PLAY, LOSE, RETURN, SHORT, LONG, CANCEL, REROLL]
 
 load_dotenv(ROOT / ".env")
 game = GameState(ROOT / os.getenv("STATE_FILE", "scenario.txt"), ROOT / os.getenv("CARDS_DIR", "cards"))
@@ -58,7 +58,7 @@ def content(s: Session) -> str:
         parts.append(f"▶️ **Selected:** {names(s.selected)}")
     parts.append(f"\n{s.status}")
     parts.append(f"-# {'/'.join(NUMBERS[:1])}-{len(game.active)} select · {PLAY} discard · {LOSE} lose · "
-                 f"{SHORT} short rest · {LONG} long rest · {CANCEL} cancel · {REROLL} redraw short rest (1 dmg)")
+                 f"{RETURN} return to hand · {SHORT} short rest · {LONG} long rest · {CANCEL} cancel · {REROLL} redraw short rest (1 dmg)")
     return "\n".join(parts)
 
 
@@ -109,12 +109,8 @@ async def handle(s: Session, emoji: str, user_id: int, added: bool) -> None:
             await refresh(s)
             return
         if added:
-            if card in game.hand:
-                if card not in s.selected:
-                    s.selected.append(card)
-            else:
-                await unreact(s, user_id, [emoji])
-                s.status = f"⚠️ {pretty(card)} is not in your hand."
+            if card not in s.selected:
+                s.selected.append(card)
         elif card in s.selected:
             s.selected.remove(card)
         await refresh(s)
@@ -129,12 +125,30 @@ async def handle(s: Session, emoji: str, user_id: int, added: bool) -> None:
             s.status = f"⚠️ Finish your long rest first (pick a discard card) or press {CANCEL}."
         elif not s.selected:
             s.status = "⚠️ Select cards with the number reactions first."
+        elif any(c not in game.hand for c in s.selected):
+            s.status = f"⚠️ Only cards in your hand can be played — deselect {names([c for c in s.selected if c not in game.hand])}."
         else:
             cards, s.selected = s.selected, []
             game.play(cards, lose=emoji == LOSE)
             s.reroll_snapshot = None
             s.status = f"{'🔥 Lost' if emoji == LOSE else '✅ Discarded'}: {names(cards)}"
             await unreact(s, user_id, [NUMBERS[game.number(c) - 1] for c in cards])
+    elif emoji == RETURN:
+        if s.long_rest:
+            s.status = f"⚠️ Finish your long rest first (pick a discard card) or press {CANCEL}."
+        elif not s.selected:
+            s.status = "⚠️ Select discard/lost cards with the number reactions first."
+        elif any(c in game.hand for c in s.selected):
+            s.status = f"⚠️ Those are already in your hand — deselect {names([c for c in s.selected if c in game.hand])}."
+        else:
+            cards, s.selected = s.selected, []
+            for c in cards:
+                game.move(c, "hand")
+            s.reroll_snapshot = None
+            s.status = f"↩️ Returned to hand: {names(cards)}"
+            await unreact(s, user_id, [NUMBERS[game.number(c) - 1] for c in cards])
+            await refresh(s, highlight=cards)
+            return
     elif emoji == SHORT:
         snap = game.snapshot()
         lost = game.short_rest()
@@ -271,7 +285,7 @@ async def help_cmd(ctx):
         "`!move hand|discard|lost <n|name>` – fix a mistake\n"
         "`!reset` – everything back to hand\n"
         f"Reactions: number = select card · {PLAY} discard selected · {LOSE} lose selected · "
-        f"{SHORT} short rest · {LONG} long rest · {CANCEL} cancel · {REROLL} redraw short rest"
+        f"{RETURN} return to hand · {SHORT} short rest · {LONG} long rest · {CANCEL} cancel · {REROLL} redraw short rest"
     )
 
 

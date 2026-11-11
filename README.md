@@ -14,9 +14,10 @@ Type `!cards` to post the board: an image of every active card grouped into **In
 
 | Reaction | Action |
 |---|---|
-| 1️⃣–🔟 | select / deselect a hand card to play (gold outline) |
+| 1️⃣–🔟 | select / deselect a card (gold outline) |
 | ✅ | play selected cards → discard |
 | 🔥 | play selected cards → lost |
+| ↩️ | return the selected discard/lost cards to hand |
 | 💤 | short rest: a random discard card is lost, the rest return to hand |
 | 🔄 | after a short rest: take 1 damage and redraw a different random card |
 | 🛌 | long rest: then react with the number of the **discard** card to lose; the rest return to hand |
