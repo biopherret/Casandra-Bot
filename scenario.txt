@@ -12,15 +12,15 @@ fc-revitalizing-fount
 fc-call-of-the-nether
 
 ## In-hand
-anticipate-intricacies
 approach-of-the-void
 dimensional-transfer
-fc-duality-shards
-fc-ray-of-light
-fc-revitalizing-fount
-fc-void-snare
 inspiration-from-beyond
 otherworldly-journey
+fc-duality-shards
+fc-ray-of-light
+fc-void-snare
+fc-revitalizing-fount
+fc-call-of-the-nether
 Circlet of Elements
 Ring of Duality
 Simple Bow
