@@ -21,6 +21,9 @@ fc-revitalizing-fount
 fc-void-snare
 inspiration-from-beyond
 otherworldly-journey
+Circlet of Elements
+Ring of Duality
+Simple Bow
 # Starts as all 9
 
 ## Discard
