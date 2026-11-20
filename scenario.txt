@@ -24,6 +24,7 @@ fc-call-of-the-nether
 Circlet of Elements
 Ring of Duality
 Simple Bow
+Minor Stamina Potion
 
 ## Discard
 
